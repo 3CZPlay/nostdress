@@ -1,41 +1,25 @@
 <!DOCTYPE html>
 <html lang="cs">
   <head>
-    <title>21b.cz Nostdress</title>
+    <title>21B.cz Nostdress</title>
     <meta charset="utf-8" />
     <link rel="icon" type="image/png" href="https://i.imgur.com/4yaPtA2.png" />
+    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=PT+Sans" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link
-      rel="stylesheet"
-      type="text/css"
-      href="//fonts.googleapis.com/css?family=PT+Sans"
-    />
     <link rel="stylesheet" href="/static/style.css" />
   </head>
   <body>
-
     <main id="main">
-
       <div class="title">{{ siteName }}</div>
       <script>
-    
       </script>
-      <div class="tagline">21b.cz Nostdress - Federativní Server Lightningových Adres s podporou Nostru</div>
+      <div class="tagline">21B.cz Nostdress - Server Lightningových Adres s podporou Nostru</div>
       <div class="owner">
         <a class="owner-button" :href="siteOwnerURL" target="_blank">
           Doménu vlastní: <span class="owner-name">{{ siteOwnerName }}</span>
         </a>
-        <p>Chuck3CZ npub:npub189v2j2r4q68v5vcua8pqzskvefaue25fy7caa0repjwu2mkpxucqsa9dr5</p>
+      <div><a href:"nostr://npub189v2j2r4q68v5vcua8pqzskvefaue25fy7caa0repjwu2mkpxucqsa9dr5">C3CZ on Nostr</a></div>
       </div>
-      </main>
-<div class="buttons">
-	<button class="button button1" onclick="location.href='https://wallet.lnbitcoin.cz/'" type="button">Wallet</button>
-	<button class="button button2" onclick="location.href='https://mempool.lnbitcoin.cz/'" type="button">Mempool</button>
-	<button class="button button3" onclick="location.href='https://btcpay.chuck3cz.eu/embed/GeT1miG4h7FXGLt6bbdvEC6C5DupwHenZcnv6Jz93GGv/BTC/ln'" type="button">Node</button>
-	<button class="button button4" onclick="location.href='https://chuck3cz.eu/'" type="button">C3CZ</button>
-	<button class="button button5" onclick="location.href='https:/nostr.lnbitcoin.cz/'" type="button">Nostr</button>
-</div>
-	<main id="main">
       <div class="card">
         <div class="description">
           Pro připojení vlastního uzlu k <b>Lightning adrese</b> použijte níže uvedený formulář.
@@ -43,7 +27,7 @@
         <form action="/grab" method="post">
           <div class="field">
             <div class="row">
-              <label for="name"> {{usernameInfo}} </label>
+              <label for="name">Požadované uživatelské jméno</label>
             </div>
             <div class="domain-wrapper">
               <input class="input" name="name" id="name" />
@@ -79,8 +63,8 @@
               <label for="host">
                 Přesměrovaní adresy (.well-known)
               </label>
-              <p>Příklad: <a href:"https://lnpay.cz/.well-known/lnurlp/satoshi"</a>"</p>
-              <p>         <a href:"https://walletofsatoshi.com/.well-known/lnurlp/satoshi69nakamoto"</a>"</p>
+              <p><i>Příklad: https://lnpay.cz/.well-known/lnurlp/satoshi</i></p>
+              <p><i>         https://walletofsatoshi.com/.well-known/lnurlp/satoshi69nakamoto</i></p>
               <input
                 class="input full-width"
                 name="host"
