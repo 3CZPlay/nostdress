@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="cs">
   <head>
-    <title>Nostdress - Federated Lightning Address Server with Nostr Support</title>
+    <title>21b.cz Nostdress</title>
     <meta charset="utf-8" />
     <link rel="icon" type="image/png" href="https://i.imgur.com/4yaPtA2.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -20,16 +20,25 @@
       <script>
     
       </script>
-      <div class="tagline">Federated Lightning Address Server with Nostr support</div>
+      <div class="tagline">21b.cz Nostdress - Federativní Server Lightningových Adres s podporou Nostru</div>
       <div class="owner">
         <a class="owner-button" :href="siteOwnerURL" target="_blank">
-          Brought to you by <span class="owner-name">{{ siteOwnerName }}</span>
+          Doménu vlastní: <span class="owner-name">{{ siteOwnerName }}</span>
         </a>
+        <p>Chuck3CZ npub:npub189v2j2r4q68v5vcua8pqzskvefaue25fy7caa0repjwu2mkpxucqsa9dr5</p>
       </div>
+      </main>
+<div class="buttons">
+	<button class="button button1" onclick="location.href='https://wallet.lnbitcoin.cz/'" type="button">Wallet</button>
+	<button class="button button2" onclick="location.href='https://mempool.lnbitcoin.cz/'" type="button">Mempool</button>
+	<button class="button button3" onclick="location.href='https://btcpay.chuck3cz.eu/embed/GeT1miG4h7FXGLt6bbdvEC6C5DupwHenZcnv6Jz93GGv/BTC/ln'" type="button">Node</button>
+	<button class="button button4" onclick="location.href='https://chuck3cz.eu/'" type="button">C3CZ</button>
+	<button class="button button5" onclick="location.href='https:/nostr.lnbitcoin.cz/'" type="button">Nostr</button>
+</div>
+	<main id="main">
       <div class="card">
         <div class="description">
-          Use the form below to connect your own node to a
-          <b>Lightning Address</b>.
+          Pro připojení vlastního uzlu k <b>Lightning adrese</b> použijte níže uvedený formulář.
         </div>
         <form action="/grab" method="post">
           <div class="field">
@@ -52,30 +61,31 @@
             </div>
           </div>
           <div class="field">
-            <label for="kind"> Node Backend Type </label>
+          <label for="kind"> Typ backendu uzlu </label>
             <select name="kind" id="kind" id="kind" v-model="kind">
-              <option disabled value="">Please select one:</option>
+              <option disabled value="">Vyberte jeden:</option>
+              <option value="forward">Přesměrování adresy</option>
               <option value="lnbits">LNbits</option>
               <option value="lnd">LND</option>
               <option value="commando">Commando (CLN)</option>
               <option value="sparko">Sparko (CLN)</option>
               <option value="eclair">Eclair</option>
               <option value="lnpay">LNPay</option>
-              <option value="forward">Forward</option>
-
             </select>
           </div>
 
           <div v-if="kind == 'forward'">
             <div class="field">
               <label for="host">
-               Forward URl
+               Přesměrovaná adresa (.well-known)
               </label>
+              <p>Příklad: <a href:"https://lnpay.cz/.well-known/lnurlp/satoshi"</a>"</p>
+              <p>         <a href:"https://walletofsatoshi.com/.well-known/lnurlp/satoshi69nakamoto"</a>"</p>
               <input
                 class="input full-width"
                 name="host"
                 id="host"
-                placeholder="https://walletofsatoshi.com/.well-known/lnurlp/satoshinakamoto58k"
+                placeholder="https://lnpay.cz/.well-known/lnurlp/satoshi"
               />
             </div>
            
@@ -84,17 +94,17 @@
           <div v-if="kind == 'lnd'">
             <div class="field">
               <label for="host">
-                LND REST Host (Protocol + IP/Domain + Port)
+                 LND REST Host (Protokol + IP/Doména + Port)
               </label>
               <input
                 class="input full-width"
                 name="host"
                 id="host"
-                placeholder="http://mylndonionztxrvxtzrs.onion:8080"
+                placeholder="http://mujlightningsxsbsxxs.onion:8080"
               />
             </div>
             <div class="field">
-              <label for="macaroon"> Invoice Macaroon (Hex)</label>
+              <label for="macaroon"> Invoice Macaroon (base64 zakódovaný/encoded)</label>
               <input
                 class="input full-width"
                 name="key"
@@ -105,7 +115,7 @@
           </div>
           <div v-if="kind == 'sparko' || kind == 'lnbits'">
             <div class="field">
-              <label for="host"> Host (Protocol + IP or Domain + Port) </label>
+              <label for="host"> Host (Protokol + IP/Doména + Port) </label>
               <input
                 class="input full-width"
                 name="host"
@@ -130,13 +140,12 @@
             </div>
             <div>
               <p>
-                Don't input your Eclair password here nor expose your Eclair
-                node carelessly. Follow
+                Nezadávejte zde heslo Eclair ani neopatrně nezveřejňujte svůj uzel Eclair. Postupujte raději podle těchto pokynů:.
                 <a
                   href="https://gist.github.com/fiatjaf/8e74740d30763713154de15562e08789#file-exposing-eclair-md"
-                  >these instructions</a
+                  ></a
                 >
-                instead (or do something better).
+             	(nebo dle nějakých lepších).
               </p>
             </div>
           </div>
@@ -152,7 +161,7 @@
           </div>
           <div class="field">
             <label style="float: right">
-              This is a new Lightning Address
+              Toto je nová Lightning adresa
               <input type="checkbox" v-model="isNew" />
             </label>
           </div>
@@ -182,12 +191,12 @@
           </div>
           <br />
           <div class="field" v-if="!isNew">
-            <label for="pin"> Secret PIN </label>
+            <label for="pin"> Tajný pin (Secret PIN) </label>
             <input class="input full-width" name="pin" id="pin" />
           </div>
           <div class="field">
             <label for="npub">
-             Nostr npub (optional for Nostr services)
+             Nostr npub (nepovinné, volitelné pro služby Nostr)
             </label>
             <input
               class="input full-width"
@@ -197,13 +206,13 @@
             />
             <div class="field" id="nostrnotifications" v-if="notifynostr == 'true'" >
               <label style="float: right">
-                Get notifed on Nostr</label>
+                Získávat notifikace od chatbota na Nostru:</label>
                 <label style="float: left">
-                Zaps with Comments
+                ZAPnutí s komentářem
                 <input type="checkbox" id="notifycomments" name="notifycomments" v-model="notifycomments" checked />
              </label>
              <label style="float: left">
-              Zaps without Comments
+              ZAPnutí bez komentářem
               <input type="checkbox" id="notifyzaps" name="notifyzaps" v-model="notifyzaps" checked />
             </label>
               <label style="float: left">
@@ -214,11 +223,11 @@
               </label>
             </div>
           </div>
-          <button class="submit" v-if="allowregistration == 'true'" >Submit</button>
+          <button class="submit" v-if="allowregistration == 'true'" >Odeslat</button>
        
       </div>
       <div class="field">  <label style="float: left"  v-if="allowregistration == 'false'">
-        Registration has been deactivated by adminsitrator for this domain</label></div>
+        Registrace byla zakázána administrátorem této domény</label></div>
     
      </form>
       <div class="resources">
@@ -227,14 +236,14 @@
           href="https://github.com/andrerfneves/lightning-address#readme"
           target="_blank"
         >
-          Lightning Address Documentation
+          Dokumentace projektu Lightningových adres
         </a>
         <a
           class="resource-button"
           target="_blank"
-          href="https://github.com/believethehype/nostdress"
+          href="https://github.com/3CZPlay/nostdress"
         >
-          Host this server on your domain!
+          Hostujte tento server také na své doméně!!
         </a>
       </div>
     </main>
