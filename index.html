@@ -4,8 +4,12 @@
     <title>21B.cz Nostdress</title>
     <meta charset="utf-8" />
     <link rel="icon" type="image/png" href="https://i.imgur.com/4yaPtA2.png" />
-    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=PT+Sans" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+     <link
+       rel="stylesheet"
+       type="text/css"
+       href="//fonts.googleapis.com/css?family=PT+Sans"
+     />
     <link rel="stylesheet" href="/static/style.css" />
   </head>
   <body>
@@ -18,7 +22,9 @@
         <a class="owner-button" :href="siteOwnerURL" target="_blank">
           Doménu vlastní: <span class="owner-name">{{ siteOwnerName }}</span>
         </a>
-      <div><a href:"nostr://npub189v2j2r4q68v5vcua8pqzskvefaue25fy7caa0repjwu2mkpxucqsa9dr5">C3CZ on Nostr</a></div>
+	<a class="owner-button" href="nostr://npub189v2j2r4q68v5vcua8pqzskvefaue25fy7caa0repjwu2mkpxucqsa9dr5" target="_blank">
+          Nostr profil: <span class="owner-name">{{ siteOwnerName }}</span>
+        </a>
       </div>
       <div class="card">
         <div class="description">
@@ -27,7 +33,7 @@
         <form action="/grab" method="post">
           <div class="field">
             <div class="row">
-              <label for="name">Požadované uživatelské jméno</label>
+              <label for="name">Požadované jméno</label>
             </div>
             <div class="domain-wrapper">
               <input class="input" name="name" id="name" />
@@ -63,8 +69,8 @@
               <label for="host">
                 Přesměrovaní adresy (.well-known)
               </label>
-              <p><i>Příklad: https://lnpay.cz/.well-known/lnurlp/satoshi</i></p>
-              <p><i>         https://walletofsatoshi.com/.well-known/lnurlp/satoshi69nakamoto</i></p>
+              <p><i><b> Příklad:</b> </p>
+			     https://lnpay.cz/.well-known/lnurlp/satoshi</i><br>
               <input
                 class="input full-width"
                 name="host"
@@ -104,7 +110,7 @@
                 class="input full-width"
                 name="host"
                 id="host"
-                placeholder="https://10.147.17.32:9737"
+                placeholder="http://192.168.16.64:3007"
               />
             </div>
             <div class="field">
@@ -190,7 +196,7 @@
             />
             <div class="field" id="nostrnotifications" v-if="notifynostr == 'true'" >
               <label style="float: right">
-                Získávat notifikace od chatbota na Nostru:</label>
+                Dostat notifikaci od <a href="nostr://npub1czech0rgapw4nerf242nnxuu7c74phm0v5s0zq74hycsr403ptaqfy0up3">chatbota</a> na Nostru za:</label>
                 <label style="float: left">
                 ZAPnutí s komentářem
                 <input type="checkbox" id="notifycomments" name="notifycomments" v-model="notifycomments" checked />
@@ -200,7 +206,7 @@
               <input type="checkbox" id="notifyzaps" name="notifyzaps" v-model="notifyzaps" checked />
             </label>
               <label style="float: left">
-                Non Zaps
+                SATnutí (Ne-ZAPy)
                 <input type="checkbox" id="notifynonzaps" name="notifynonzaps" v-model="notifynonzaps" checked/>
               </label>
              

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>Lightning Address Saved | Satdress</title>
+    <title>Lightning Adresa Uložena | Nostdress</title>
     <meta charset="utf-8" />
     <link rel="icon" type="image/png" href="https://i.imgur.com/4yaPtA2.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -10,23 +10,23 @@
   </head>
   <body>
     <main id="main">
-      <div class="title">Success!</div>
+      <div class="title">Povedlo se!</div>
       <div class="card">
         <div class="description">
-          <b>{{ name }}@{{ actual_domain }}</b> is your new Lightning Address!
+          <b>{{ name }}@{{ actual_domain }}</b> je vaše nová Lightning Adresa!
         </div>
         <div class="bold-small">
-          In order to edit the configuration of this address in the future you
-          must save this secret pin:
+          Pokud budete chtít v budoucnu adresu změnit
+	  musíte si uložit tento pin:
         </div>
         <div class="code">{{ pin }}</div>
         <button class="copy-button" @click="copyToClipboard">
-          {{ copied ? 'Copied!' : 'Copy Secret PIN' }}
+          {{ copied ? 'Zkopírováno!' : 'Kopírovat PIN' }}
         </button>
         <div v-if="invoice != ''">
         <div class="bold-small">
-          To ensure the connection with your Lightning backend is configured
-          properly, we've created a test invoice that can be seen below.
+         Pro vyzkoušení Lightning backendu byla nakonfigurována testovací LN faktura
+         Díky ní se vám pošle také PIN do vaší peněženky.
         </div>
         
         <canvas id="qr"></canvas>
@@ -34,15 +34,15 @@
       </div>
       </div>
       <div class="resources">
-        <a class="resource-button" target="_blank" href="https://t.me/lnurl">
-          Not working? Ask for help!
+        <a class="resource-button" target="_blank" href="nostr://npub189v2j2r4q68v5vcua8pqzskvefaue25fy7caa0repjwu2mkpxucqsa9dr5">
+          Něco nefunguje? Požádejte o pomoc!
         </a>
         <a
           class="resource-button"
-          href="https://github.com/andrerfneves/lightning-address#readme"
+          href="https://github.com/3CZPlay/nostdress#readme"
           target="_blank"
         >
-          More information on Lightning Address
+          Více informací o Nostdress
         </a>
       </div>
     </main>

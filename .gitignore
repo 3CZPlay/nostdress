@@ -4,3 +4,4 @@
 *.env
 satdress
 nostdress
+.DS_Store
