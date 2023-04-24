@@ -2,6 +2,7 @@
 *.swo
 *.yaml
 *.env
+*.db
 satdress
 nostdress
 .DS_Store
