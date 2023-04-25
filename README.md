@@ -1,19 +1,22 @@
 # Nostdress
 
-Federated Lightning Address Server (with NIP57 Zap support)
+Server Lightning Adres (s podporou ZAPů - NIP57)
 
-## How to run
+## Jak spustit
 
-1. Download the binary from the releases page (or compile with `go build` or if you want to compile for another system ,like a linux webserver:   `env GOOS=linux GOARCH=amd64 go build`   )
+0.-1. Download the binary from the releases page (or compile with `go build` or if you want to compile for another system ,like a linux webserver:   `env GOOS=linux GOARCH=amd64 go build`   )
+
+1. `git clone https://github.com/3CZPlay/nostdress/` `go build` or if you want to compile for another system ,like a linux webserver:   `env GOOS=linux GOARCH=amd64 go build`   )
+
 2. Set the following environment variables by placing a .env file in the folder or copy .env.example to .env and adjust it to your needs.
 
-New parameters in this fork:
+Nové parametry v tomto forku:
 
-> The (`NOSTR_PRIVATE_KEY`) in the parameters should be in bench32 format (`nsec..`) and it should be a new one. It is needed to sign messages only, so does not need and should not be your main account key.
+> (`NOSTR_PRIVATE_KEY`) in the parameters should be in bech32 format (`nsec..`) and it should be a new one. It is needed to sign messages only, so does not need and should not be your main account key.
 
-> (`NIP05`) will run a NIPO5 instance so that users that register with their NPUB can use their Lightning address for validation in Nostr as well. 
+> (`NIP05`) spustí NIPO5 instanci, to uživatelům dovolí ověřit jejich NPUB na Nostru s LN adresou použitou na posílání satů. 
 
-> (`GET_NOSTR_PROFILE`) is still experimental and should be left on false in case it causes errors. The idea is to provide the Nostr Profile picture to wallets that support it.
+> (`GET_NOSTR_PROFILE`) experimentální, měla by zůstat na hodnotě `false`. The idea is to provide the Nostr Profile picture to wallets that support it.
 
 > (`FORWARD_URL`) can be left unset and satdress will work as before. If set, the main Page will be forwarded to the given url. The interface can then be accesed at domain.org/lnaddress
 
