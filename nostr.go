@@ -1,13 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net"
+	"image"
+	"image/gif"
+	"image/jpeg"
+	"image/png"
 	"net/http"
 	"strings"
 	"sync"
@@ -16,6 +21,7 @@ import (
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip04"
 	"github.com/nbd-wtf/go-nostr/nip19"
+	"github.com/nfnt/resize"
 )
 
 type Tag []string
@@ -33,21 +39,6 @@ type NostrEvent struct {
 var nip57Receipt nostr.Event
 var zapEventSerializedStr string
 var nip57ReceiptRelays []string
-
-// Relay connections
-type RelayConnection struct {
-	URL       string
-	relay     *nostr.Relay
-	lastUsed  time.Time
-	closeChan chan bool
-}
-
-var relayConnections = make(map[string]*RelayConnection)
-var relayConnectionsMutex sync.Mutex
-var connectionTimeout = 30 * time.Minute
-var ignoreRelayDuration = 5 * time.Minute
-var ignoredRelays = make(map[string]time.Time)
-var ignoredRelaysMutex sync.Mutex
 
 func Nip57DescriptionHash(zapEventSerialized string) string {
 	hash := sha256.Sum256([]byte(zapEventSerialized))
@@ -128,172 +119,190 @@ func sendMessage(receiverKey string, message string) {
 }
 
 func handleNip05(w http.ResponseWriter, r *http.Request) {
-	var err error
-	var response string
+	username := r.URL.Query().Get("name")
+	if username == "" {
+		http.Error(w, `{"error": "missing 'name' parameter"}`, http.StatusBadRequest)
+		return
+	}
 
-	var allusers []Params
-	allusers, err = GetAllUsers(s.Domain)
-	firstpartstring := "{\n  \"names\": {\n"
-	finalpartstring := " \t}\n}"
-	var middlestring = ""
+	domains := getDomains(s.Domain)
+	domain := ""
 
-	for _, user := range allusers {
-		nostrnpubHex := DecodeBench32(user.Npub)
-		if user.Npub != "" { //do some more validation checks
-			middlestring = middlestring + "\t\"" + user.Name + "\"" + ": " + "\"" + nostrnpubHex + "\"" + ",\n"
+	if len(domains) == 1 {
+		domain = domains[0]
+	} else {
+		hostname := r.URL.Host
+		if hostname == "" {
+			hostname = r.Host
 		}
+
+		for _, one := range domains {
+			if strings.Contains(hostname, one) {
+				domain = one
+				break
+			}
+		}
+		if domain == "" {
+			http.Error(w, `{"error": "incorrect domain"}`, http.StatusBadRequest)
+			return
+		}
+	}
+
+	params, err := GetName(username, domain)
+	if err != nil {
+		log.Error().Err(err).Str("name", username).Str("domain", domain).Msg("failed to get name")
+		http.Error(w, fmt.Sprintf(`{"error": "failed to get name %s@%s"}`, username, domain), http.StatusNotFound)
+		return
+	}
+
+	nostrnpubHex := DecodeBench32(params.Npub)
+	response := map[string]interface{}{
+		"names": map[string]interface{}{
+			username: nostrnpubHex,
+		},
 	}
 
 	if s.Nip05 {
-		//Remove ',' from last entry
-		if len(middlestring) > 2 {
-			middlestringtrim := middlestring[:len(middlestring)-2]
-			middlestringtrim += "\n"
-
-			response = firstpartstring + middlestringtrim + finalpartstring
-		}
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		fmt.Fprintf(w, response)
-	} else {
-		return
-	}
-
-	if err != nil {
-		return
+		json.NewEncoder(w).Encode(response)
 	}
 }
 
-func GetNostrProfileMetaData(npub string) (nostr.ProfileMetadata, error) {
-	ctx, _ := context.WithTimeout(context.Background(), 3*time.Second)
-
+func GetNostrProfileMetaData(npub string, index int) (nostr.ProfileMetadata, error) {
 	var metadata *nostr.ProfileMetadata
-	// connect to any relay
-	url := "wss://relay.damus.io"
-	relay, err := nostr.RelayConnect(ctx, url)
+	// Prepend special purpose relay wss://purplepag.es to the list of relays
+	var relays = append([]string{"wss://purplepag.es"}, Relays...)
+
+	for index < len(relays) {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		rel := relays[index]
+		log.Printf("Get Image from: %s", rel)
+		url := rel
+		relay, err := nostr.RelayConnect(ctx, url)
+		if err != nil {
+			log.Printf("Could not connect to [%s], trying next relay", url)
+			index++
+			continue
+		}
+
+		var filters nostr.Filters
+		if _, v, err := nip19.Decode(npub); err == nil {
+			t := make(map[string][]string)
+			t["p"] = []string{v.(string)}
+			filters = []nostr.Filter{{
+				Authors: []string{v.(string)},
+				Kinds:   []int{0},
+				Limit:   1,
+			}}
+		} else {
+			log.Printf("Could not find Profile, trying next relay")
+			index++
+			relay.Close()
+			continue
+		}
+		sub, err := relay.Subscribe(ctx, filters)
+		evs := make([]nostr.Event, 0)
+
+		endStoredEventsOnce := new(sync.Once)
+		go func() {
+			endStoredEventsOnce.Do(func() {
+				<-sub.EndOfStoredEvents
+			})
+		}()
+
+		for ev := range sub.Events {
+			evs = append(evs, *ev)
+		}
+		relay.Close()
+
+		if len(evs) > 0 {
+			metadata, err = nostr.ParseMetadata(evs[0])
+			log.Printf("Success getting Nostr Profile")
+			break
+		} else {
+			err = fmt.Errorf("no profile found for npub %s on relay %s", npub, url)
+			log.Printf("Could not find Profile, trying next relay")
+			index++
+		}
+	}
+
+	if metadata == nil {
+		return nostr.ProfileMetadata{}, fmt.Errorf("Couldn't download Profile for given relays")
+	}
+	return *metadata, nil
+}
+
+// Reusable instance of http client
+var httpClient = &http.Client{
+	Timeout: 5 * time.Second,
+}
+
+// addImageToMetaData adds an image to the LNURL metadata
+func addImageToProfile(params *Params, imageURL string) (err error) {
+	// Download and resize profile picture
+	picture, contentType, err := DownloadProfilePicture(imageURL)
 	if err != nil {
-		return *metadata, err
+		log.Debug().Str("Downloading profile picture", err.Error()).Msg("Error")
+		return err
 	}
 
-	// create filters
-	var filters nostr.Filters
-	if _, v, err := nip19.Decode(npub); err == nil {
-		t := make(map[string][]string)
-		t["p"] = []string{v.(string)}
-		filters = []nostr.Filter{{
-			Authors: []string{v.(string)},
-			Kinds:   []int{0},
-			// limit = 3, get the three most recent notes
-			Limit: 1,
-		}}
-	} else {
-		return *metadata, err
-
+	// Determine image format
+	var ext string
+	switch contentType {
+	case "image/jpeg":
+		ext = "jpeg"
+	case "image/png":
+		ext = "png"
+	case "image/gif":
+		ext = "gif"
+	default:
+		log.Debug().Str("Detecting image format", "unknown format").Msg("Error")
+		return fmt.Errorf("Detecting image format: unknown format")
 	}
-	sub, err := relay.Subscribe(ctx, filters)
-	evs := make([]nostr.Event, 0)
 
-	go func() {
-		<-sub.EndOfStoredEvents
+	// Set image metadata in LNURL metadata
+	encodedPicture := base64.StdEncoding.EncodeToString(picture)
+	params.Image.Ext = ext
+	params.Image.DataURI = "data:" + contentType + ";base64," + encodedPicture
+	params.Image.Bytes = picture
 
-	}()
-
-	for ev := range sub.Events {
-
-		evs = append(evs, *ev)
-	}
-	relay.Close()
-
-	if len(evs) > 0 {
-		metadata, err = nostr.ParseMetadata(evs[0])
-	} else {
-		err = fmt.Errorf("no profile found for npub %s on relay %s", npub, url)
-	}
-	return *metadata, err
-
+	return nil
 }
 
-func ignoreRelay(url string) {
-	ignoredRelaysMutex.Lock()
-	defer ignoredRelaysMutex.Unlock()
-	ignoredRelays[url] = time.Now()
-}
-
-func isRelayIgnored(url string) bool {
-	ignoredRelaysMutex.Lock()
-	defer ignoredRelaysMutex.Unlock()
-
-	if t, ok := ignoredRelays[url]; ok {
-		if time.Since(t) < ignoreRelayDuration {
-			return true
-		}
-		delete(ignoredRelays, url)
-	}
-	return false
-}
-
-func isBrokenPipeError(err error) bool {
-	var netErr net.Error
-	if errors.As(err, &netErr) {
-		if strings.Contains(netErr.Error(), "write: broken pipe") {
-			return true
-		}
-	}
-	return false
-}
-
-func getRelayConnection(url string) (*nostr.Relay, error) {
-	if isRelayIgnored(url) {
-		return nil, fmt.Errorf("relay %s is being ignored", url)
-	}
-
-	relayConnectionsMutex.Lock()
-	defer relayConnectionsMutex.Unlock()
-
-	if relayConn, ok := relayConnections[url]; ok {
-		relayConn.lastUsed = time.Now()
-		return relayConn.relay, nil
-	}
-
-	ctx := context.WithValue(context.Background(), "url", url)
-	relay, err := nostr.RelayConnect(ctx, url)
+func DownloadProfilePicture(url string) ([]byte, string, error) {
+	res, err := httpClient.Get(url)
 	if err != nil {
-		ignoreRelay(url)
-		return nil, err
+		return nil, "", errors.New("failed to download image: " + err.Error())
+	}
+	defer res.Body.Close()
+
+	contentType := res.Header.Get("Content-Type")
+	if contentType != "image/jpeg" && contentType != "image/png" && contentType != "image/gif" {
+		return nil, "", errors.New("unsupported image format")
 	}
 
-	relayConn := &RelayConnection{
-		URL:       url,
-		relay:     relay,
-		lastUsed:  time.Now(),
-		closeChan: make(chan bool),
+	var img image.Image
+	switch contentType {
+	case "image/jpeg":
+		img, err = jpeg.Decode(res.Body)
+	case "image/png":
+		img, err = png.Decode(res.Body)
+	case "image/gif":
+		img, err = gif.Decode(res.Body)
 	}
-	relayConnections[url] = relayConn
-
-	go func() {
-		select {
-		case <-time.After(connectionTimeout):
-			relayConnectionsMutex.Lock()
-			if time.Since(relayConn.lastUsed) >= connectionTimeout {
-				relay.Close()
-				delete(relayConnections, url)
-			}
-			relayConnectionsMutex.Unlock()
-		case <-relayConn.closeChan:
-		}
-	}()
-
-	return relay, nil
-}
-
-func closeRelayConnection(url string) {
-	relayConnectionsMutex.Lock()
-	defer relayConnectionsMutex.Unlock()
-
-	if relayConn, ok := relayConnections[url]; ok {
-		relayConn.closeChan <- true
-		relayConn.relay.Close()
-		delete(relayConnections, url)
+	if err != nil {
+		return nil, "", errors.New("failed to decode image: " + err.Error())
 	}
+
+	img = resize.Thumbnail(thumbnailWidth, thumbnailHeight, img, resize.Lanczos3)
+
+	buf := new(bytes.Buffer)
+
+	if err := jpeg.Encode(buf, img, nil); err != nil {
+		return nil, "", errors.New("failed to encode image: " + err.Error())
+	}
+	return buf.Bytes(), contentType, nil
 }
 
 func publishNostrEvent(ev nostr.Event, relays []string) {
@@ -305,40 +314,53 @@ func publishNostrEvent(ev nostr.Event, relays []string) {
 	var wg sync.WaitGroup
 	wg.Add(len(relays))
 
+	// Create a buffered channel to control the number of active goroutines
+	concurrencyLimit := 20
+	goroutines := make(chan struct{}, concurrencyLimit)
+
 	// Publish the event to relays
 	for _, url := range relays {
+		goroutines <- struct{}{}
 		go func(url string) {
-			defer wg.Done()
+			defer func() {
+				<-goroutines
+				wg.Done()
+			}()
 
 			var err error
-			var relay *nostr.Relay
+			var conn *nostr.Relay
 			var status nostr.Status
 			maxRetries := 3
+			retryDelay := 1 * time.Second
 
 			for i := 0; i < maxRetries; i++ {
-				relay, err = getRelayConnection(url)
+				// Set a timeout for connecting to the relay
+				connCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				conn, err = nostr.RelayConnect(connCtx, url)
+				cancel()
+
 				if err != nil {
 					log.Printf("Error connecting to relay %s: %v", url, err)
-					return
+					time.Sleep(retryDelay)
+					retryDelay *= 2
+					continue
 				}
+				defer conn.Close()
 
-				time.Sleep(3 * time.Second)
+				// Set a timeout for publishing to the relay
+				pubCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				status, err = conn.Publish(pubCtx, ev)
+				cancel()
 
-				ctx := context.WithValue(context.Background(), "url", url)
-				status, err = relay.Publish(ctx, ev)
 				if err != nil {
 					log.Printf("Error publishing to relay %s: %v", url, err)
-
-					if isBrokenPipeError(err) {
-						closeRelayConnection(url) // Close the broken connection
-						continue                  // Retry connection and publish
-					}
+					time.Sleep(retryDelay)
+					retryDelay *= 2
+					continue
 				} else {
-					log.Printf("[NOSTR] published to %s: %s", url, status.String()) // Convert the nostr.Status value to a string
+					log.Printf("[NOSTR] published to %s: %s", url, status.String())
 					break
 				}
-
-				time.Sleep(3 * time.Second)
 			}
 		}(url)
 	}
